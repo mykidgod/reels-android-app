@@ -3,7 +3,10 @@ name: Build Android APK (Release)
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch: # Allows manual trigger from GitHub Actions web tab!
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -41,3 +44,14 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: 🏷️ Publish Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: "Rayworks Reels Studio v1.0.0"
+          body: "갤럭시 / 안드로이드 폰 독립형 실행 앱 (.apk) 배포 파일입니다."
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

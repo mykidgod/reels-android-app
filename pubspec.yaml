@@ -14,7 +14,7 @@ dependencies:
   google_generative_ai: ^0.4.6
 
   # Native Android FFmpeg Video Engine (ARM64 GPL Full)
-  ffmpeg_kit_flutter_full_gpl: ^6.0.3
+  ffmpeg_kit_flutter_new: ^4.6.7
 
   # Media Selection & Storage
   image_picker: ^1.1.2
