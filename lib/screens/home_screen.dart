@@ -6,9 +6,11 @@ import '../services/settings_service.dart';
 import '../services/ai_service.dart';
 import '../services/ffmpeg_service.dart';
 import '../services/download_service.dart';
+import '../services/crop_service.dart';
 import '../widgets/slot_card.dart';
 import 'template_settings_screen.dart';
 import 'settings_screen.dart';
+import 'video_editor_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final SettingsService settings;
@@ -24,7 +26,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String _currentLang = 'ko'; // 'ko' or 'ja'
   bool _isBusy = false;
   String _statusMessage = '준비 완료: 영상을 등록해주세요.';
-  double _progress = 0.0;
 
   late List<ReelSlot> _slots;
 
@@ -49,11 +50,24 @@ class _HomeScreenState extends State<HomeScreen> {
       if (pickedFiles.isNotEmpty) {
         for (int i = 0; i < pickedFiles.length && i < _slots.length; i++) {
           final f = pickedFiles[i];
-          _slots[i].videoPath = f.path;
-          _slots[i].videoName = f.path.split('/').last;
-          _slots[i].isRendered = false;
+          final slot = _slots[i];
+          slot.videoPath = f.path;
+          slot.videoName = f.path.split('/').last;
+          slot.isRendered = false;
+
+          // Auto-detect metadata & clean video bounds
+          final meta = await CropService.getVideoMetadata(f.path);
+          slot.origWidth = meta.width;
+          slot.origHeight = meta.height;
+          slot.duration = meta.duration;
+          slot.hasAudio = meta.hasAudio;
+
+          final detected = await CropService.autoDetectCrop(f.path, meta.width, meta.height);
+          if (detected != null) {
+            slot.cropBox = detected;
+          }
         }
-        _statusMessage = '총 ${pickedFiles.length}개의 영상이 성공적으로 등록되었습니다.';
+        _statusMessage = '총 ${pickedFiles.length}개의 영상 등록 및 자동 크롭 감지 완료!';
       } else {
         _statusMessage = '영상이 선택되지 않았습니다.';
       }
@@ -68,13 +82,52 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _pickSingleVideoForSlot(int slotIdx) async {
     final file = await _downloadService.pickSingleVideo();
     if (file != null) {
+      final slot = _slots[slotIdx];
+      slot.videoPath = file.path;
+      slot.videoName = file.path.split('/').last;
+      slot.isRendered = false;
+
+      final meta = await CropService.getVideoMetadata(file.path);
+      slot.origWidth = meta.width;
+      slot.origHeight = meta.height;
+      slot.duration = meta.duration;
+      slot.hasAudio = meta.hasAudio;
+
+      final detected = await CropService.autoDetectCrop(file.path, meta.width, meta.height);
+      if (detected != null) {
+        slot.cropBox = detected;
+      }
+
       setState(() {
-        _slots[slotIdx].videoPath = file.path;
-        _slots[slotIdx].videoName = file.path.split('/').last;
-        _slots[slotIdx].isRendered = false;
         _statusMessage = '${slotIdx + 1}번 슬롯에 영상이 등록되었습니다.';
       });
     }
+  }
+
+  // --- Open Full Dual-Panel Video Editor & Crop Dialog ---
+  void _openVideoEditor(int slotIdx) {
+    final slot = _slots[slotIdx];
+    if (!slot.hasVideo) {
+      _pickSingleVideoForSlot(slotIdx);
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoEditorScreen(
+          slots: _slots,
+          initialIndex: slotIdx,
+          activeLang: _currentLang,
+          settings: widget.settings,
+          onSlotUpdated: (updated) {
+            setState(() {
+              _slots[updated.index - 1] = updated;
+            });
+          },
+        ),
+      ),
+    ).then((_) => setState(() {}));
   }
 
   // --- AI Generate Title & Caption for Single Slot ---
@@ -153,7 +206,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final title = slot.getTitle(_currentLang);
       final template = _currentLang == 'ja' ? widget.settings.templateJa : widget.settings.templateKo;
 
-      // Output directory: /storage/emulated/0/DCIM/Reels or app documents
       final extDir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
       final outDir = Directory('${extDir.path}/Reels_${_currentLang.toUpperCase()}');
       await outDir.create(recursive: true);
@@ -166,6 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
         lang: _currentLang,
         outputFilePath: outPath,
         customTemplatePath: template,
+        cropBox: slot.effectiveCropBox,
         muteAudio: widget.settings.muteAudio,
         bypassCopyright: widget.settings.bypassCopyright,
       );
@@ -178,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
           } else {
             slot.outputKoPath = outPath;
           }
-          _statusMessage = '🎉 ${slot.index}번 릴스 렌더링 완성! ($outPath)';
+          _statusMessage = '🎉 ${slot.index}번 릴스 렌더링 완성!';
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${slot.index}번 영상 완성: ${File(outPath).path}')),
@@ -393,6 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 slot: _slots[idx],
                 currentLang: _currentLang,
                 onPickVideo: () => _pickSingleVideoForSlot(idx),
+                onOpenEditor: () => _openVideoEditor(idx),
                 onGenerateAI: () => _generateAIForSlot(idx),
                 onRender: () => _renderSingleSlot(idx),
                 onTitleChanged: (val) => _slots[idx].setTitle(_currentLang, val),

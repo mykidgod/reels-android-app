@@ -40,7 +40,7 @@ jobs:
       - name: 🚀 Upload APK Artifact for One-Click Download
         uses: actions/upload-artifact@v4
         with:
-          name: RayworksReelsStudio-v1.0.0
+          name: RayworksReelsStudio-v1.1.0
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 30
@@ -50,9 +50,9 @@ jobs:
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         with:
-          tag_name: v1.0.0
-          name: "Rayworks Reels Studio v1.0.0"
-          body: "갤럭시 / 안드로이드 폰 독립형 실행 앱 (.apk) 배포 파일입니다."
+          tag_name: v1.1.0
+          name: "Rayworks Reels Studio v1.1.0 (Full Feature: Crop & Typography Match)"
+          body: "윈도우용 프로그램의 모든 기능(비주얼 크롭 뷰파인더, 자동 감지 크롭, 정확한 1080x1920 투명 텍스트 정렬, 동적 Y좌표 배치, 무음 영상 감지 등)이 100% 동일하게 구현된 안드로이드 정식 릴리즈입니다."
           files: build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

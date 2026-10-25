@@ -7,6 +7,7 @@ class SlotCard extends StatelessWidget {
   final ReelSlot slot;
   final String currentLang;
   final VoidCallback onPickVideo;
+  final VoidCallback onOpenEditor;
   final VoidCallback onGenerateAI;
   final VoidCallback onRender;
   final Function(String) onTitleChanged;
@@ -17,6 +18,7 @@ class SlotCard extends StatelessWidget {
     required this.slot,
     required this.currentLang,
     required this.onPickVideo,
+    required this.onOpenEditor,
     required this.onGenerateAI,
     required this.onRender,
     required this.onTitleChanged,
@@ -28,6 +30,7 @@ class SlotCard extends StatelessWidget {
     final title = slot.getTitle(currentLang);
     final caption = slot.getCaption(currentLang);
     final isJa = currentLang == 'ja';
+    final hasCrop = slot.effectiveCropBox != null;
 
     return Card(
       color: const Color(0xFF131D31),
@@ -45,7 +48,7 @@ class SlotCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Row: Index Badge & Status
+            // Top Row: Index Badge & Status & Crop Badge
             Row(
               children: [
                 Container(
@@ -74,6 +77,27 @@ class SlotCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (hasCrop)
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withOpacity(0.2),
+                      border: Border.all(color: const Color(0xFF818CF8), width: 0.8),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.crop, size: 11, color: Color(0xFF818CF8)),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${slot.effectiveCropBox!.width.toInt()}x${slot.effectiveCropBox!.height.toInt()}',
+                          style: const TextStyle(color: Color(0xFF818CF8), fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (slot.isProcessing)
                   const SizedBox(
                     width: 16,
@@ -86,16 +110,23 @@ class SlotCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // Middle Row: Title Input Field
+            // Middle Row: Title Input Field (2-line preservation)
             TextField(
               controller: TextEditingController(text: title)
                 ..selection = TextSelection.collapsed(offset: title.length),
               onChanged: onTitleChanged,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              maxLines: 2,
+              minLines: 1,
+              style: const TextStyle(
+                fontFamily: 'MalgunGothic',
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: const Color(0xFF0E1626),
-                hintText: isJa ? '推奨タイトル（14〜18文字）' : '추천 영상 제목 한 줄 (14~18자)',
+                hintText: isJa ? '推奨タイトル（14〜18文字）' : '추천 영상 제목 (14~18자 내외, 엔터로 줄바꿈)',
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 isDense: true,
@@ -120,46 +151,61 @@ class SlotCard extends StatelessWidget {
             // Bottom Action Row
             Row(
               children: [
-                // Pick / Replace Video Button
+                // Pick Video Button
                 OutlinedButton.icon(
                   onPressed: onPickVideo,
-                  icon: const Icon(Icons.video_library, size: 16),
-                  label: Text(slot.hasVideo ? '영상 변경' : '영상 선택'),
+                  icon: const Icon(Icons.video_library, size: 15),
+                  label: Text(slot.hasVideo ? '변경' : '선택', style: const TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF38BDF8),
                     side: const BorderSide(color: Color(0xFF0284C7)),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
+
+                // Crop & Video Editor Button
+                ElevatedButton.icon(
+                  onPressed: slot.hasVideo ? onOpenEditor : null,
+                  icon: const Icon(Icons.crop, size: 15),
+                  label: const Text('크롭&편집', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  ),
+                ),
+                const SizedBox(width: 6),
 
                 // AI Generate Button
                 OutlinedButton.icon(
                   onPressed: slot.hasVideo ? onGenerateAI : null,
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('AI 추천'),
+                  icon: const Icon(Icons.auto_awesome, size: 15),
+                  label: const Text('AI', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFC084FC),
                     side: const BorderSide(color: Color(0xFF7E22CE)),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
 
                 // Caption Dialog Button
                 IconButton(
                   tooltip: '피드 본문 보기',
-                  icon: const Icon(Icons.article_outlined, color: Colors.white70),
+                  icon: const Icon(Icons.article_outlined, color: Colors.white70, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   onPressed: () => _showCaptionDialog(context, caption),
                 ),
 
                 const Spacer(),
 
-                // Render or Share Button
+                // Share Button (if rendered)
                 if (slot.isRendered) ...[
                   IconButton(
                     tooltip: '인스타 공유',
-                    icon: const Icon(Icons.share, color: Color(0xFF10B981)),
+                    icon: const Icon(Icons.share, color: Color(0xFF10B981), size: 20),
                     onPressed: () {
                       final outPath = isJa ? slot.outputJaPath : slot.outputKoPath;
                       if (outPath != null && File(outPath).existsSync()) {
@@ -168,15 +214,17 @@ class SlotCard extends StatelessWidget {
                     },
                   ),
                 ],
+
+                // Render Button
                 ElevatedButton(
                   onPressed: slot.hasVideo && !slot.isProcessing ? onRender : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0D9488),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: Text(slot.isRendered ? '재렌더링' : '렌더링'),
+                  child: Text(slot.isRendered ? '재렌더링' : '렌더링', style: const TextStyle(fontSize: 12)),
                 ),
               ],
             ),
