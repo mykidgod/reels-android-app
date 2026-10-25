@@ -48,6 +48,7 @@ jobs:
       - name: 🏷️ Publish Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
+        continue-on-error: true
         with:
           tag_name: v1.0.0
           name: "Rayworks Reels Studio v1.0.0"
