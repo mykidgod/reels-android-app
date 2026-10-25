@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Output directory: /storage/emulated/0/DCIM/Reels or app documents
       final extDir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
       final outDir = Directory('${extDir.path}/Reels_${_currentLang.toUpperCase()}');
-      await outDir.create(parents: true);
+      await outDir.create(recursive: true);
 
       final outPath = '${outDir.path}/reel_${slot.index.toString().padLeft(2, '0')}_${_currentLang.toUpperCase()}.mp4';
 

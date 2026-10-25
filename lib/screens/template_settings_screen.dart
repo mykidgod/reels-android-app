@@ -142,8 +142,9 @@ class _TemplateSettingsScreenState extends State<TemplateSettingsScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF131D31),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.parse(
-                    '1px solid ${isJa ? '#F472B6' : '#38BDF8'}',
+                  border: Border.all(
+                    color: isJa ? const Color(0xFFF472B6) : const Color(0xFF38BDF8),
+                    width: 1.2,
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,

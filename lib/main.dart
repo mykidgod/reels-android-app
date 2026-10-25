@@ -42,7 +42,6 @@ class RayworksReelsApp extends StatelessWidget {
           primary: Color(0xFF0284C7),
           secondary: Color(0xFF2DD4BF),
           surface: Color(0xFF131D31),
-          background: Color(0xFF0E1626),
         ),
         fontFamily: 'Roboto',
       ),
